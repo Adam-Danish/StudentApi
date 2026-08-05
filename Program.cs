@@ -1,13 +1,10 @@
 using Microsoft.EntityFrameworkCore;
 using StudentApi.Models;
 
-// Disable file watching (reloadOnChange) to prevent reaching Linux inotify limit on Render
-var builderOptions = new WebApplicationOptions
-{
-    Args = args
-};
+var builderOptions = new WebApplicationOptions { Args = args };
 var builder = WebApplication.CreateBuilder(builderOptions);
 
+// Prevent file watcher crash on Linux containers
 builder.Host.ConfigureAppConfiguration((hostingContext, config) =>
 {
     foreach (var source in config.Sources)
@@ -19,27 +16,23 @@ builder.Host.ConfigureAppConfiguration((hostingContext, config) =>
     }
 });
 
-// Add services to the container.
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Configure SQLite DbContext
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") 
     ?? "Data Source=student.db"));
 
 var app = builder.Build();
 
-// Enable Swagger UI at root URL
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Student API v1");
-    c.RoutePrefix = string.Empty;
+    c.RoutePrefix = string.Empty; // Serves Swagger UI at application root
 });
 
-// Create database schema on startup safely
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -47,5 +40,4 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.MapControllers();
-
 app.Run();
