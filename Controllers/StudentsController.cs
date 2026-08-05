@@ -1,75 +1,39 @@
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using StudentApi.Models;
+using StudentApi.Models; // Change to your actual Models namespace if different
 
-namespace StudentApi.Controllers;
+var builder = WebApplication.CreateBuilder(args);
 
-[ApiController]
-[Route("api/[controller]")]
-public class StudentsController : ControllerBase
+// Add services to the container.
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+// Configure SQLite DbContext
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") 
+    ?? "Data Source=student.db"));
+
+var app = builder.Build();
+
+// --- Enable Swagger UI in ALL environments (including Production / Render) ---
+app.UseSwagger();
+app.UseSwaggerUI(c =>
 {
-    private readonly AppDbContext _context;
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Student API v1");
+    c.RoutePrefix = string.Empty; // Serves Swagger directly at the root URL (https://studentapi-hc5t.onrender.com/)
+});
 
-    public StudentsController(AppDbContext context)
-    {
-        _context = context;
-    }
-
-    // 1. GET ALL: api/students
-    [HttpGet]
-    public async Task<IActionResult> GetStudents()
-    {
-        var students = await _context.Students.ToListAsync();
-        return Ok(students);
-    }
-
-    // 2. GET BY ID: api/students/1
-    [HttpGet("{id}")]
-    public async Task<IActionResult> GetStudentById(int id)
-    {
-        var student = await _context.Students.FindAsync(id);
-        if (student == null)
-            return NotFound(new { message = $"Student with ID {id} not found." });
-
-        return Ok(student);
-    }
-
-    // 3. POST (CREATE): api/students
-    [HttpPost]
-    public async Task<IActionResult> CreateStudent([FromBody] Student newStudent)
-    {
-        _context.Students.Add(newStudent);
-        await _context.SaveChangesAsync();
-
-        return CreatedAtAction(nameof(GetStudentById), new { id = newStudent.Id }, newStudent);
-    }
-
-    // 4. PUT (UPDATE): api/students/1
-    [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateStudent(int id, [FromBody] Student updatedStudent)
-    {
-        var student = await _context.Students.FindAsync(id);
-        if (student == null)
-            return NotFound(new { message = $"Student with ID {id} not found." });
-
-        student.Name = updatedStudent.Name;
-        student.Email = updatedStudent.Email;
-        student.CGPA = updatedStudent.CGPA;
-
-        await _context.SaveChangesAsync();
-        return Ok(student);
-    }
-
-    // 5. DELETE: api/students/1
-    [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteStudent(int id)
-    {
-        var student = await _context.Students.FindAsync(id);
-        if (student == null)
-            return NotFound(new { message = $"Student with ID {id} not found." });
-
-        _context.Students.Remove(student);
-        await _context.SaveChangesAsync();
-        return NoContent();
-    }
+// Auto-create database & tables on startup
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.EnsureCreated();
 }
+
+app.UseHttpsRedirection();
+app.UseAuthorization();
+
+// CRITICAL: Registers controller routes like /api/students
+app.MapControllers();
+
+app.Run();
