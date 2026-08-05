@@ -1,7 +1,23 @@
 using Microsoft.EntityFrameworkCore;
 using StudentApi.Models;
 
-var builder = WebApplication.CreateBuilder(args);
+// Disable file watching (reloadOnChange) to prevent reaching Linux inotify limit on Render
+var builderOptions = new WebApplicationOptions
+{
+    Args = args
+};
+var builder = WebApplication.CreateBuilder(builderOptions);
+
+builder.Host.ConfigureAppConfiguration((hostingContext, config) =>
+{
+    foreach (var source in config.Sources)
+    {
+        if (source is Microsoft.Extensions.Configuration.FileConfigurationSource fileSource)
+        {
+            fileSource.ReloadOnChange = false;
+        }
+    }
+});
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -15,7 +31,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 var app = builder.Build();
 
-// Enable Swagger UI at root
+// Enable Swagger UI at root URL
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -23,14 +39,13 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = string.Empty;
 });
 
-// Safe database creation scope block
-using (var scope = app.Services.CreateAsyncScope())
+// Create database schema on startup safely
+using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
 }
 
-app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
