@@ -15,7 +15,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 var app = builder.Build();
 
-// Enable Swagger UI at root URL
+// Enable Swagger UI at root
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
@@ -23,14 +23,13 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = string.Empty;
 });
 
-// Auto-create database & tables on startup
-using (var scope = app.Services.CreateScope())
+// Safe database creation scope block
+using (var scope = app.Services.CreateAsyncScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
 }
 
-app.UseHttpsRedirection();
 app.UseAuthorization();
 app.MapControllers();
 
