@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using StudentApi.Models; // Change to your actual Models namespace if different
+using StudentApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -15,12 +15,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 var app = builder.Build();
 
-// --- Enable Swagger UI in ALL environments (including Production / Render) ---
+// Enable Swagger UI at root URL
 app.UseSwagger();
 app.UseSwaggerUI(c =>
 {
     c.SwaggerEndpoint("/swagger/v1/swagger.json", "Student API v1");
-    c.RoutePrefix = string.Empty; // Serves Swagger directly at the root URL (https://studentapi-hc5t.onrender.com/)
+    c.RoutePrefix = string.Empty;
 });
 
 // Auto-create database & tables on startup
@@ -32,8 +32,6 @@ using (var scope = app.Services.CreateScope())
 
 app.UseHttpsRedirection();
 app.UseAuthorization();
-
-// CRITICAL: Registers controller routes like /api/students
 app.MapControllers();
 
 app.Run();
