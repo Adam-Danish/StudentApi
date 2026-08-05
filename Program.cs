@@ -25,6 +25,15 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// --- Auto-create SQLite database and tables on startup ---
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.EnsureCreated();
+}
+
+app.Run();
+
 app.UseCors("AllowAll"); // Apply CORS policy
 
 app.MapControllers();
